@@ -1,0 +1,19 @@
+{
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"preview": "vite preview",
+		"predeploy" : "pnpm run build",
+		"deploy" : "gh-pages -d dist",
+		"prettier": "prettier --write"
+	},
+	"dependencies": {
+		"three": "^0.164.1"
+	},
+	"devDependencies": {
+		"gh-pages": "^6.1.1",
+		"vite": "^5.2.11"
+	},
+	"packageManager": "pnpm@8.6.10+sha512.10194f760ac0aa62032ba95f94d9bc33896e79618ce0f2892039e0b7abc9d7e7e6ce1dded38f36b60e769d48e2b86be4cd9dac9e0035f3518baa49d78401e022",
+	"homepage": "https://nbhatialin.github.io/"
+}
