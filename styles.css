@@ -1,4 +1,3 @@
-
 .home-header {
     margin: auto;
     width: 60%;
@@ -17,9 +16,9 @@
 }
 
 .home-header li a {
-	padding-right: 50px;
-	padding-left: 50px;
-	font-family: Verdana, Geneva, sans-serif;
+    padding-right: 50px;
+    padding-left: 50px;
+    font-family: Verdana, Geneva, sans-serif;
 }
 
 .home-header h1 {
@@ -30,9 +29,9 @@
 }
 
 .centered {
-	display: block;
+    display: block;
     margin-left: auto;
-    margin-right: auto
+    margin-right: auto;
 }
 
 .page-header ul {
