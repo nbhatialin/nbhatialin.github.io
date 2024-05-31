@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Sky, Water } from "three/examples/jsm/Addons.js";
+import getRandomInt from "./getRandomInt";
 
 type PhotoSceneProps = {
     container: HTMLElement,
@@ -18,6 +19,7 @@ export default class PhotoScene {
         this.sun = new THREE.Vector3();
         this.starMeshes = []
         this.renderedStars = new Set()
+        this.starCounter = 0
         this.parameters = {
             elevation: 2,
             azimuth: 180
@@ -29,7 +31,7 @@ export default class PhotoScene {
         this.radius = 600
         this.theta = 0
 
-        this.speed = 5
+        this.speed = 4
 
         this.animate = this.animate.bind(this);
         this.render = this.render.bind(this);
@@ -91,6 +93,7 @@ export default class PhotoScene {
     // 2 arrays -- one to store stars in sky & one to store options
     starMeshes: Array<THREE.Mesh>
     renderedStars: Set<THREE.Mesh>
+    starCounter: number
 
 
     parameters: {
@@ -110,7 +113,7 @@ export default class PhotoScene {
         // Want to vary between 100 & 300 to give good perspective
         this.camera.position.y = 100;
 
-        this.loadStars()
+        // this.loadStars()
         this.initWater()
         this.initSkybox()
         this.initLights()
@@ -179,7 +182,7 @@ export default class PhotoScene {
 
     loadBaloo() {
         const loader = new GLTFLoader();
-        loader.load( 'models/gltf/Horse.glb', ( gltf ) => {
+        loader.load( 'models/gltf/Horse.glb', async ( gltf ) => {
 
             this.balooMesh = gltf.scene.children[ 0 ];
             this.balooMesh.scale.set( .5, .5, .5);
@@ -190,39 +193,62 @@ export default class PhotoScene {
             this.balooMixer.clipAction( gltf.animations[ 0 ] ).setDuration( 1 ).play();
 
             this.target = this.balooMesh
-            this.generateStar()
+            this.loadStars()
         } );
     }
 
     loadStars() {
+        for (let i = 1; i < 366; i++) {
+            this.generateStar(i)
+        }
         
+        setTimeout(() => {
+            this.renderStars()  
+        }, 5000);
     }
 
-    generateStar() {
-        const texture = new THREE.TextureLoader().load( 'textures/ab_aw/aw_1.jpeg' );
+    generateStar(idx: number) {
+        const texture = new THREE.TextureLoader().load( `textures/ab_aw/aw_${idx}.jpeg` );
         texture.colorSpace = THREE.SRGBColorSpace;
 
         const geometry = new THREE.BoxGeometry( 30, 30, 30 );
         const material = new THREE.MeshBasicMaterial( { map: texture } );
         const mesh = new THREE.Mesh( geometry, material );
 
+        this.starMeshes.push(mesh)
+    }
+
+    renderStars() { 
+        if (this.starCounter < 365) {
+            this.renderStar(this.starCounter)
+            this.starCounter++
+            setTimeout(() => {
+                this.renderStars()  
+            }, 100); // initial frequency at which stars render
+        } else {
+            console.log('365 rendered')
+        }
+        
+
+    }
+
+    renderStar(idx: number) {
         const meshPosition = this.balooMesh.position.clone()
 
-        meshPosition.x += Math.random() * 10 - 5;
-        meshPosition.y = Math.random() * 1000 - 5;
+        meshPosition.x += getRandomInt(-1000, 1000);
+        meshPosition.y = getRandomInt(500, 1500);
         // meshPosition.y = 100
-        meshPosition.z += Math.random() * 10 - 5;
+        meshPosition.z += getRandomInt(888, 2888);
 
-        mesh.position.copy( meshPosition )
+        this.starMeshes[idx].position.copy( meshPosition )
         // initialize position based on current baloo.position + add y to drop from sky
 
-        this.scene.add( mesh );
-        this.starMeshes.push(mesh)
+        this.scene.add( this.starMeshes[idx] );
 
         // temporary to track star
         // this.target = mesh
 
-        this.renderedStars.add(mesh)
+        this.renderedStars.add(this.starMeshes[idx])
     }
 
     updateSun() {
@@ -251,29 +277,33 @@ export default class PhotoScene {
     }
 
     render() {
-
         // for flipping cube (photo)
         const time = performance.now() * 0.001;
-
         // Adjust added value to change rotation velocity
         this.theta += 0.1;
-
         const delta = this.clock.getDelta()
+
+
+        // adjust camera radius / zoom for variability
+        // this.radius = Math.sin( delta )
+
+        // if camera zoom far in go slow mo (slow speed of falling stars & z translate proportionally)
+
 
         // Rotate and drop stars through scene
         for (const mesh of this.renderedStars) {
             mesh.position.y -= Math.sin( delta ) * this.speed + 1;
             mesh.rotation.x = time * 0.5;
             mesh.rotation.z = time * 0.51;
-            if (mesh.position.y < -10) {
+            if (mesh.position.y < -15) {
                 this.renderedStars.delete(mesh)
                 this.scene.remove(mesh)
-                this.generateStar()
+                this.renderStar(getRandomInt(1, 364))
             }
         }
 
         if ( this.balooMesh ) {
-            this.balooMesh.translateZ(this.speed)
+            this.balooMesh.translateZ(this.speed) + 1
         }
 
         // have camera track target
