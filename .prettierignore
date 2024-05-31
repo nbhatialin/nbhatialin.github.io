@@ -1,0 +1,6 @@
+build/*
+jsm/*
+assets/*
+.vite/*
+node_modules/*
+js/*
