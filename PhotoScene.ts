@@ -33,6 +33,10 @@ export default class PhotoScene {
 
         this.speed = 4
 
+        this.varianceFactor = [13, 31, 19, 41]
+        this.varianceFactorLength = 3
+        this.varianceFactorIndex = 0
+
         this.animate = this.animate.bind(this);
         this.render = this.render.bind(this);
 
@@ -95,6 +99,10 @@ export default class PhotoScene {
     renderedStars: Set<THREE.Mesh>
     starCounter: number
 
+
+    varianceFactor: Array<number>
+    varianceFactorIndex: number
+    varianceFactorLength: number
 
     parameters: {
         elevation: number,
@@ -183,8 +191,8 @@ export default class PhotoScene {
     loadBaloo() {
         const loader = new GLTFLoader();
         loader.load( 'models/gltf/Horse.glb', async ( gltf ) => {
-
-            this.balooMesh = gltf.scene.children[ 0 ];
+            console.log(gltf)
+            this.balooMesh = gltf.scene.children[0];
             this.balooMesh.scale.set( .5, .5, .5);
             this.scene.add( this.balooMesh );
 
@@ -283,9 +291,21 @@ export default class PhotoScene {
         this.theta += 0.1;
         const delta = this.clock.getDelta()
 
-
+        // console.log(Math.cos(this.clock.elapsedTime / 50))
+        // console.log(this.clock.elapsedTime)
+        // console.log(Math.sin( delta ))
+        
         // adjust camera radius / zoom for variability
-        // this.radius = Math.sin( delta )
+        this.radius = Math.abs(Math.cos(this.clock.elapsedTime / 20) * 600) + 200
+
+        if ((this.clock.elapsedTime + 1) % this.varianceFactor[this.varianceFactorIndex % this.varianceFactorLength] < 1) {
+            this.varianceFactorIndex++
+            // Swap targets
+            // this.target = [...this.renderedStars][Math.floor(Math.random()*this.renderedStars.size)]
+        }
+
+        // Case for slowmo: radius < x && variance factor == certain 1 or 2
+
 
         // if camera zoom far in go slow mo (slow speed of falling stars & z translate proportionally)
 
@@ -303,14 +323,12 @@ export default class PhotoScene {
         }
 
         if ( this.balooMesh ) {
-            this.balooMesh.translateZ(this.speed) + 1
+            this.balooMesh.translateZ(this.speed) + 1   
         }
 
         // have camera track target
         if (this.target) {
-
-            
-            
+            // 
             this.camera.position.y = this.target.position.y + 200
 
             // rotate around target
