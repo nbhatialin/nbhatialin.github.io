@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { Sky, TGALoader, Water } from "three/examples/jsm/Addons.js";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { Sky, Water } from "three/examples/jsm/Addons.js";
 
 type PhotoSceneProps = {
     container: HTMLElement,
@@ -81,7 +81,7 @@ export default class PhotoScene {
     speed: number 
 
     // used to change camera between stars & baloo
-    target: THREE.Vector3
+    target: THREE.Mesh
 
     // Array to store meshes of photo-textured stars
     // Could be a map to refer by image name then delete later
@@ -110,6 +110,7 @@ export default class PhotoScene {
         // Want to vary between 100 & 300 to give good perspective
         this.camera.position.y = 100;
 
+        this.loadStars()
         this.initWater()
         this.initSkybox()
         this.initLights()
@@ -193,10 +194,16 @@ export default class PhotoScene {
         } );
     }
 
+    loadStars() {
+        
+    }
+
     generateStar() {
+        const texture = new THREE.TextureLoader().load( 'textures/ab_aw/aw_1.jpeg' );
+        texture.colorSpace = THREE.SRGBColorSpace;
+
         const geometry = new THREE.BoxGeometry( 30, 30, 30 );
-        const material = new THREE.MeshStandardMaterial( { roughness: 0 } );
-    
+        const material = new THREE.MeshBasicMaterial( { map: texture } );
         const mesh = new THREE.Mesh( geometry, material );
 
         const meshPosition = this.balooMesh.position.clone()
@@ -213,7 +220,7 @@ export default class PhotoScene {
         this.starMeshes.push(mesh)
 
         // temporary to track star
-        this.target = mesh
+        // this.target = mesh
 
         this.renderedStars.add(mesh)
     }
@@ -274,7 +281,7 @@ export default class PhotoScene {
 
             
             
-            this.camera.position.y = this.target.position.y
+            this.camera.position.y = this.target.position.y + 200
 
             // rotate around target
             this.camera.position.x = this.target.position.x + this.radius * Math.sin( THREE.MathUtils.degToRad( this.theta ) );
@@ -287,9 +294,6 @@ export default class PhotoScene {
         if ( this.balooMixer ) {
             this.balooMixer.update( delta );
         }
-
-        
-        
 
         this.water.material.uniforms[ 'time' ].value += 1.0 / 60.0;
 
