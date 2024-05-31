@@ -16,6 +16,8 @@ export default class PhotoScene {
         this.camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 10000 );
 
         this.sun = new THREE.Vector3();
+        this.starMeshes = []
+        this.renderedStars = new Set()
         this.parameters = {
             elevation: 2,
             azimuth: 180
@@ -78,6 +80,19 @@ export default class PhotoScene {
     // Used in emulating movement of Baloo
     speed: number 
 
+    // used to change camera between stars & baloo
+    target: THREE.Vector3
+
+    // Array to store meshes of photo-textured stars
+    // Could be a map to refer by image name then delete later
+    
+    // or make it an array, potentially initialize all at load & just select at random when dropping from sky
+    // not random, loop through to ensure unique star
+    // 2 arrays -- one to store stars in sky & one to store options
+    starMeshes: Array<THREE.Mesh>
+    renderedStars: Set<THREE.Mesh>
+
+
     parameters: {
         elevation: number,
         azimuth: number
@@ -100,7 +115,6 @@ export default class PhotoScene {
         this.initLights()
 
         this.loadBaloo()
-        
     }
 
     initWater() {
@@ -118,7 +132,7 @@ export default class PhotoScene {
                 sunDirection: new THREE.Vector3(),
                 sunColor: 0xffffff,
                 waterColor: 0x001e0f,
-                distortionScale: 3.7,
+                distortionScale: 3.7, // how clearly items reflect in water
                 fog: this.scene.fog !== undefined
             }
         );
@@ -130,7 +144,8 @@ export default class PhotoScene {
 
     initSkybox() {
         this.sky = new Sky();
-        this.sky.scale.setScalar( 10000 );
+        // Should match waterGeometry size for extended runway if target is moving
+        this.sky.scale.setScalar( 100000000 );
         this.scene.add( this.sky );
 
         const skyUniforms = this.sky.material.uniforms;
@@ -166,14 +181,41 @@ export default class PhotoScene {
         loader.load( 'models/gltf/Horse.glb', ( gltf ) => {
 
             this.balooMesh = gltf.scene.children[ 0 ];
-            this.balooMesh.scale.set( 1, 1, 1);
+            this.balooMesh.scale.set( .5, .5, .5);
             this.scene.add( this.balooMesh );
 
             this.balooMixer = new THREE.AnimationMixer( this.balooMesh );
 
             this.balooMixer.clipAction( gltf.animations[ 0 ] ).setDuration( 1 ).play();
 
+            this.target = this.balooMesh
+            this.generateStar()
         } );
+    }
+
+    generateStar() {
+        const geometry = new THREE.BoxGeometry( 30, 30, 30 );
+        const material = new THREE.MeshStandardMaterial( { roughness: 0 } );
+    
+        const mesh = new THREE.Mesh( geometry, material );
+
+        const meshPosition = this.balooMesh.position.clone()
+
+        meshPosition.x += Math.random() * 10 - 5;
+        meshPosition.y = Math.random() * 1000 - 5;
+        // meshPosition.y = 100
+        meshPosition.z += Math.random() * 10 - 5;
+
+        mesh.position.copy( meshPosition )
+        // initialize position based on current baloo.position + add y to drop from sky
+
+        this.scene.add( mesh );
+        this.starMeshes.push(mesh)
+
+        // temporary to track star
+        this.target = mesh
+
+        this.renderedStars.add(mesh)
     }
 
     updateSun() {
@@ -204,28 +246,50 @@ export default class PhotoScene {
     render() {
 
         // for flipping cube (photo)
-        // const time = performance.now() * 0.001;
+        const time = performance.now() * 0.001;
 
         // Adjust added value to change rotation velocity
         this.theta += 0.1;
 
+        const delta = this.clock.getDelta()
+
+        // Rotate and drop stars through scene
+        for (const mesh of this.renderedStars) {
+            mesh.position.y -= Math.sin( delta ) * this.speed + 1;
+            mesh.rotation.x = time * 0.5;
+            mesh.rotation.z = time * 0.51;
+            if (mesh.position.y < -10) {
+                this.renderedStars.delete(mesh)
+                this.scene.remove(mesh)
+                this.generateStar()
+            }
+        }
+
         if ( this.balooMesh ) {
             this.balooMesh.translateZ(this.speed)
+        }
 
-            this.camera.position.x = this.balooMesh.position.x + this.radius * Math.sin( THREE.MathUtils.degToRad( this.theta ) );
-            this.camera.position.z = this.balooMesh.position.z + this.radius * Math.cos( THREE.MathUtils.degToRad( this.theta ) );
+        // have camera track target
+        if (this.target) {
 
-            this.camera.lookAt( this.balooMesh.position );
+            
+            
+            this.camera.position.y = this.target.position.y
+
+            // rotate around target
+            this.camera.position.x = this.target.position.x + this.radius * Math.sin( THREE.MathUtils.degToRad( this.theta ) );
+            this.camera.position.z = this.target.position.z + this.radius * Math.cos( THREE.MathUtils.degToRad( this.theta ) );
+            
+            // focus on target
+            this.camera.lookAt( this.target.position );
         }
 
         if ( this.balooMixer ) {
-            this.balooMixer.update( this.clock.getDelta() );
+            this.balooMixer.update( delta );
         }
 
-        // for flipping cube (photo)
-        // mesh.position.y = Math.sin( time ) * 20 + 5;
-        // mesh.rotation.x = time * 0.5;
-        // mesh.rotation.z = time * 0.51;
+        
+        
 
         this.water.material.uniforms[ 'time' ].value += 1.0 / 60.0;
 
